@@ -164,7 +164,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
 
-            ValidateSubscription();
+            //ValidateSubscription();
         }
 
         #region IBrokerage
