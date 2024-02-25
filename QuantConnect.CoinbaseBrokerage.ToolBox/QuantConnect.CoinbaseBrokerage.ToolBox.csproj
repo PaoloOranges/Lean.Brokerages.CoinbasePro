@@ -25,9 +25,6 @@
         <OutputPath>bin\Release\</OutputPath>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="..\..\Lean\Common\Properties\SharedAssemblyInfo.cs" Link="Properties\SharedAssemblyInfo.cs" />
-    </ItemGroup>
-    <ItemGroup>
 		<PackageReference Include="QuantConnect.ToolBox" Version="2.5.*" />
 		<ProjectReference Include="..\QuantConnect.CoinbaseBrokerage\QuantConnect.CoinbaseBrokerage.csproj" />
     </ItemGroup>
