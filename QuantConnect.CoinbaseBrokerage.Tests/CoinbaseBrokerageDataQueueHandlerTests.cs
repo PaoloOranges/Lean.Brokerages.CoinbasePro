@@ -18,12 +18,14 @@ using System.Linq;
 using NUnit.Framework;
 using System.Threading;
 using QuantConnect.Data;
+using QuantConnect.Tests;
 using QuantConnect.Logging;
 using Microsoft.CodeAnalysis;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     /// <summary>
     /// The class contains DataQueueHandler's tests
@@ -39,11 +41,13 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         {
             get
             {
+                TestGlobals.Initialize();
+
                 yield return new TestCaseData(BTCUSDC, Resolution.Tick);
                 yield return new TestCaseData(BTCUSDC, Resolution.Second);
                 yield return new TestCaseData(BTCUSDC, Resolution.Minute);
                 yield return new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Coinbase), Resolution.Minute);
-                yield return new TestCaseData(Symbol.Create("GRTUSD", SecurityType.Crypto, Market.Coinbase), Resolution.Second);
+                yield return new TestCaseData(Symbol.Create("SOLUSD", SecurityType.Crypto, Market.Coinbase), Resolution.Second);
             }
         }
 
@@ -190,7 +194,9 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         {
             var cancelationToken = new CancellationTokenSource();
             var startTime = DateTime.UtcNow;
+            var obj = new object();
             var tickResetEvent = new ManualResetEvent(false);
+            var minimumAvailableReturnResponseData = liquidSymbolsSubscriptionConfigs.Count / 2;
 
             _brokerage.Message += (_, brokerageMessageEvent) =>
             {
@@ -199,7 +205,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 cancelationToken.Cancel();
             };
 
-            var symbolTicks = new Dictionary<Symbol, bool>();
+            var symbolTicks = new ConcurrentDictionary<Symbol, bool>();
             foreach (var config in liquidSymbolsSubscriptionConfigs)
             {
                 ProcessFeed(_brokerage.Subscribe(config, (s, e) => { }),
@@ -215,14 +221,18 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                             Assert.IsTrue(tick.Price > 0, "Price was not greater then zero");
                             Assert.IsTrue(tick.Value > 0, "Value was not greater then zero");
 
-                            if (!symbolTicks.TryGetValue(tick.Symbol, out var symbol))
+                            lock (obj)
                             {
-                                symbolTicks[tick.Symbol] = true;
-                            }
+                                if (!symbolTicks.TryGetValue(tick.Symbol, out var symbol))
+                                {
+                                    _brokerage.Unsubscribe(config);
+                                    symbolTicks[tick.Symbol] = true;
+                                }
 
-                            if (symbolTicks.Count == liquidSymbolsSubscriptionConfigs.Count / 2)
-                            {
-                                tickResetEvent.Set();
+                                if (symbolTicks.Count == minimumAvailableReturnResponseData)
+                                {
+                                    tickResetEvent.Set();
+                                } 
                             }
                         }
                     });

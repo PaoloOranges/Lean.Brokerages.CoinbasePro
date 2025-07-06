@@ -15,9 +15,9 @@
 
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 /// <summary>
 /// Represents a message used for subscribing to WebSocket channels on Coinbase.
@@ -25,10 +25,10 @@ namespace QuantConnect.CoinbaseBrokerage.Models;
 public readonly struct CoinbaseSubscriptionMessage
 {
     /// <summary>
-    /// Gets the API key for authentication (if required).
+    /// Gets the JWT for authentication.
     /// </summary>
-    [JsonProperty("api_key")]
-    public string ApiKey { get; }
+    [JsonProperty("jwt")]
+    public string JWT { get; }
 
     /// <summary>
     /// Gets the channel to subscribe to.
@@ -43,18 +43,6 @@ public readonly struct CoinbaseSubscriptionMessage
     public List<string> ProductIds { get; }
 
     /// <summary>
-    /// Gets the signature for authentication (if required).
-    /// </summary>
-    [JsonProperty("signature")]
-    public string Signature { get; }
-
-    /// <summary>
-    /// Gets the timestamp of the subscription message.
-    /// </summary>
-    [JsonProperty("timestamp")]
-    public string Timestamp { get; }
-
-    /// <summary>
     /// Gets the type of WebSocket subscription.
     /// </summary>
     [JsonProperty("type")]
@@ -63,21 +51,16 @@ public readonly struct CoinbaseSubscriptionMessage
     /// <summary>
     /// Initializes a new instance of the <see cref="CoinbaseSubscriptionMessage"/> struct.
     /// </summary>
-    /// <param name="apiKey">The API key for authentication (if required).</param>
     /// <param name="channel">The channel to subscribe to.</param>
     /// <param name="productIds">The list of product IDs associated with the subscription.</param>
-    /// <param name="signature">The signature for authentication (if required).</param>
-    /// <param name="timestamp">The timestamp of the subscription message.</param>
+    /// <param name="jwtToken">The generated JWT token for authentication.</param>
     /// <param name="type">The type of WebSocket subscription.</param>
     [JsonConstructor]
-    public CoinbaseSubscriptionMessage(string apiKey, string channel, List<string> productIds,
-        string signature, string timestamp, WebSocketSubscriptionType type)
+    public CoinbaseSubscriptionMessage(string channel, List<string> productIds, string jwtToken, WebSocketSubscriptionType type)
     {
-        ApiKey = apiKey;
+        JWT = jwtToken;
         Channel = channel;
         ProductIds = productIds;
-        Signature = signature;
-        Timestamp = timestamp;
         Type = type;
     }
 }

@@ -3,27 +3,31 @@
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
 
         <IsPackable>false</IsPackable>
         <Copyright>Copyright ©  2021</Copyright>
         <TestProjectType>UnitTest</TestProjectType>
         <OutputPath>bin\$(Configuration)\</OutputPath>
-        <Product>QuantConnect.CoinbaseBrokerage.Tests</Product>
-        <AssemblyName>QuantConnect.CoinbaseBrokerage.Tests</AssemblyName>
-        <RootNamespace>QuantConnect.CoinbaseBrokerage.Tests</RootNamespace>
-        <AssemblyTitle>QuantConnect.CoinbaseBrokerage.Tests</AssemblyTitle>
+        <Product>QuantConnect.Brokerages.Coinbase.Tests</Product>
+        <AssemblyName>QuantConnect.Brokerages.Coinbase.Tests</AssemblyName>
+        <RootNamespace>QuantConnect.Brokerages.Coinbase.Tests</RootNamespace>
+        <AssemblyTitle>QuantConnect.Brokerages.Coinbase.Tests</AssemblyTitle>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.0.1" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-        <PackageReference Include="NUnit" Version="3.13.3" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.2.1">
+        <PackageReference Include="NUnit" Version="4.2.2" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.6.0">
             <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
+    </ItemGroup>
+    <ItemGroup>
+        <Using Include="NUnit.Framework.Legacy.ClassicAssert" Alias="Assert" />
     </ItemGroup>
 
     <ItemGroup>

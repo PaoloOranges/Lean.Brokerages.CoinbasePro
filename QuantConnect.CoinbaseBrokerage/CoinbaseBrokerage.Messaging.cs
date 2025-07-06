@@ -23,17 +23,16 @@ using QuantConnect.Logging;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using QuantConnect.Securities;
-using QuantConnect.Brokerages;
 using QuantConnect.Orders.Fees;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using QuantConnect.CoinbaseBrokerage.Models;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
-using QuantConnect.CoinbaseBrokerage.Models.Constants;
-using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+using QuantConnect.Brokerages.Coinbase.Models;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Constants;
+using QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     public partial class CoinbaseBrokerage
     {
@@ -101,7 +100,10 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
 
-            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
+            if (Log.DebuggingEnabled)
+            {
+                Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}"); 
+            }
 
             try
             {
@@ -348,7 +350,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     continue;
                 }
-                _tradeIds[symbol] = new (trade.TradeId, trade.Time.UtcDateTime);
+                _tradeIds[symbol] = new(trade.TradeId, trade.Time.UtcDateTime);
 
                 var tick = new Tick
                 {
@@ -508,10 +510,10 @@ namespace QuantConnect.CoinbaseBrokerage
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
 
-            var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
+            var jwtToken = _coinbaseApi.GetWebSocketJWTToken();
 
             var json = JsonConvert.SerializeObject(
-                new CoinbaseSubscriptionMessage(apiKey, channel, productIds, signature, timestamp, subscriptionType));
+                new CoinbaseSubscriptionMessage(channel, productIds, jwtToken, subscriptionType));
 
             Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}:send json message: " + json);
 

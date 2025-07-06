@@ -13,11 +13,10 @@
  * limitations under the License.
 */
 
-using System;
 using QuantConnect.Configuration;
 using static QuantConnect.Configuration.ApplicationParser;
 
-namespace QuantConnect.CoinbaseBrokerage.ToolBox
+namespace QuantConnect.Brokerages.Coinbase.ToolBox
 {
     internal static class Program
     {
@@ -34,23 +33,13 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                 PrintMessageAndExit(1, "ERROR: --app value is required");
             }
 
-            if(string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-key")) || string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-secret")))
+            if (string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-name")) || string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-private-key")))
             {
                 PrintMessageAndExit(1, "ERROR: check configs: 'coinbase-api-key' or 'coinbase-api-secret'");
             }
 
             var targetAppName = targetApp.ToString();
-            if (targetAppName.Contains("download") || targetAppName.Contains("dl"))
-            {
-                var fromDate = Parse.DateTimeExact(GetParameterOrExit(optionsObject, "from-date"), "yyyyMMdd-HH:mm:ss");
-                var resolution = optionsObject.ContainsKey("resolution") ? optionsObject["resolution"].ToString() : "";
-                var tickers = ToolboxArgumentParser.GetTickers(optionsObject);
-                var toDate = optionsObject.ContainsKey("to-date")
-                    ? Parse.DateTimeExact(optionsObject["to-date"].ToString(), "yyyyMMdd-HH:mm:ss")
-                    : DateTime.UtcNow;
-                CoinbaseDownloaderProgram.CoinbaseDownloader(tickers, resolution, fromDate, toDate);
-            }
-            else if (targetAppName.Contains("updater") || targetAppName.EndsWith("spu"))
+            if (targetAppName.Contains("updater") || targetAppName.EndsWith("spu"))
             {
                 CoinbaseDownloaderProgram.ExchangeInfoDownloader();
             }

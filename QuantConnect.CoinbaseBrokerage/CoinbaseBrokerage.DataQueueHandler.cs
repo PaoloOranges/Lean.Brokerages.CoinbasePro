@@ -21,7 +21,7 @@ using QuantConnect.Interfaces;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// An implementation of <see cref="IDataQueueHandler"/> for Coinbase
@@ -71,17 +71,13 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <param name="job">Job we're subscribing for</param>
         public void SetJob(LiveNodePacket job)
         {
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
-                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
-
             Initialize(
                 webSocketUrl: job.BrokerageData["coinbase-url"],
-                apiKey: job.BrokerageData["coinbase-api-key"],
-                apiSecret: job.BrokerageData["coinbase-api-secret"],
+                name: job.BrokerageData["coinbase-api-name"],
+                privateKey: job.BrokerageData["coinbase-api-private-key"],
                 restApiUrl: job.BrokerageData["coinbase-rest-api"],
                 algorithm: null,
                 orderProvider: null,
-                aggregator: aggregator,
                 job: job
             );
 

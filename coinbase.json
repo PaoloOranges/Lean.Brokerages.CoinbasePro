@@ -1,4 +1,7 @@
 {
+	"name" : "Coinbase",
+	"logo-url" : "https://cdn.quantconnect.com/i/tu/coinbase.png",
+	"min-deposit" : "None",
 	"description": "Coinbase is a US-based cryptocurrency spot exchange. We are integrated with the Coinbase Advanced API which is in beta and has stability issues.",
 	
 	"platforms-features": [
@@ -13,5 +16,23 @@
 	"order-types": [ "Market", "Limit", "Stop Market",  "Stop Limit" ],
 	"assets": [ "Crypto Spot" ], 
 	"brokerage-url": "https://www.coinbase.com/",
-	"documentation": "/docs/v2/cloud-platform/live-trading/brokerages/coinbase"
+	"documentation": "/docs/v2/cloud-platform/live-trading/brokerages/coinbase",
+	"module-specification": {
+		"download": {
+			"data-types": [
+				"Trade"
+			],
+			"resolutions": [
+				"Minute",
+				"Hour",
+				"Daily"
+			],
+			"security-types": [
+				"Crypto"
+			],
+			"markets": [
+				"Coinbase"
+			]
+		}
+	}
 }

@@ -27,7 +27,6 @@ using QuantConnect.Orders;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
-using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders.Fees;
@@ -35,10 +34,10 @@ using System.Collections.Generic;
 using QuantConnect.Configuration;
 using System.Security.Cryptography;
 using System.Net.NetworkInformation;
-using QuantConnect.CoinbaseBrokerage.Api;
-using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Api;
+using BrokerageEnums = QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// Represents a partial class for interacting with the Coinbase brokerage using WebSocket communication.
@@ -91,15 +90,14 @@ namespace QuantConnect.CoinbaseBrokerage
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with set of parameters.
         /// </summary>
         /// <param name="webSocketUrl">WebSockets url</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="restApiUrl">api url</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
-        /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public CoinbaseBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
-            IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
-            : this(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, aggregator, job)
+        public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
+            IAlgorithm algorithm, LiveNodePacket job)
+            : this(webSocketUrl, name, privateKey, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, job)
         {
 
         }
@@ -108,25 +106,23 @@ namespace QuantConnect.CoinbaseBrokerage
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with set of parameters.
         /// </summary>
         /// <param name="webSocketUrl">WebSockets url</param>
-        /// <param name="apiKey">Api key</param>
-        /// <param name="apiSecret">Api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="restApiUrl">Api url</param>
         /// <param name="algorithm">The algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
-        /// <param name="aggregator">Consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public CoinbaseBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
-            IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
+        public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
+            IAlgorithm algorithm, IOrderProvider orderProvider, LiveNodePacket job)
             : base(MarketName)
         {
             Initialize(
                 webSocketUrl: webSocketUrl,
-                apiKey: apiKey,
-                apiSecret: apiSecret,
+                name: name,
+                privateKey: privateKey,
                 restApiUrl: restApiUrl,
                 algorithm: algorithm,
                 orderProvider: orderProvider,
-                aggregator: aggregator,
                 job: job
             );
         }
@@ -135,27 +131,36 @@ namespace QuantConnect.CoinbaseBrokerage
         /// Initialize the instance of this class
         /// </summary>
         /// <param name="webSocketUrl">The web socket base url</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
-        /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
-        protected void Initialize(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
-            IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
+        protected void Initialize(string webSocketUrl, string name, string privateKey, string restApiUrl,
+            IAlgorithm algorithm, IOrderProvider orderProvider, LiveNodePacket job)
         {
             if (IsInitialized)
             {
                 return;
             }
 
-            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
+            //ValidateSubscription();
+
+            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, name, privateKey);
 
             _job = job;
             _algorithm = algorithm;
-            _aggregator = aggregator;
+
+            _aggregator = Composer.Instance.GetPart<IDataAggregator>();
+            if (_aggregator == null)
+            {
+                // toolbox downloader case
+                var aggregatorName = Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager");
+                Log.Trace($"CoinbaseBrokerage.Initialize(): found no data aggregator instance, creating {aggregatorName}");
+                _aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(aggregatorName);
+            }
             _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(MarketName);
-            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
+            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, name, privateKey, restApiUrl);
             OrderProvider = orderProvider;
 
             SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()
@@ -163,8 +168,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 SubscribeImpl = (symbols, _) => SubscribeSymbolsOnDataChannels(symbols.ToList()),
                 UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
-
-            //ValidateSubscription();
         }
 
         #region IBrokerage
@@ -370,7 +373,8 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             return !symbol.Value.Contains("UNIVERSE") &&
                 symbol.SecurityType == SecurityType.Crypto &&
-                symbol.ID.Market == MarketName;
+                symbol.ID.Market == MarketName &&
+                _symbolMapper.IsKnownLeanSymbol(symbol);
         }
 
         #endregion
@@ -416,10 +420,10 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             try
             {
-                var productId = 183;
-                var userId = Config.GetInt("job-user-id");
-                var token = Config.Get("api-access-token");
-                var organizationId = Config.Get("job-organization-id", null);
+                const int productId = 183;
+                var userId = Globals.UserId;
+                var token = Globals.UserToken;
+                var organizationId = Globals.OrganizationID;
                 // Verify we can authenticate with this user and token
                 var api = new ApiConnection(userId, token);
                 if (!api.Connected)
